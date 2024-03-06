@@ -37,6 +37,9 @@ sua = pd.read_csv(os.path.join(datPath, "dat",
                     "SUA_Crops_Livestock_E_All_Data_(Normalized).csv"),
                     encoding = "latin-1", engine="python")
 fs = sua[(sua.Area==coi)&(sua["Element Code"]==5141)&(sua.Year.isin(years))]
+if len(fs) == 0:
+    print(f"No data for {coi} ({args.country})", file=sys.stderr)
+    sys.exit(1)
 
 # run consumption / prov
 model._consumption_provenance.main(fs, coi, scenPath, datPath)
