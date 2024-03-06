@@ -1,11 +1,35 @@
+import argparse
 import model._consumption_provenance
 import model._get_impacts
 import pandas as pd
 import os
+import sys
 
-scenPath = "/maps/tsb42/food_v0/results/bra"
-datPath = "/maps/tsb42/food_v0/model/"
-coi = "Brazil"
+countries = pd.read_excel("/maps/mwd24/food_v0/model/dat/nocsDataExport_20220822-151738.xlsx")
+
+parser = argparse.ArgumentParser() 
+parser.add_argument(
+    "--countrycode",
+    type=str,
+    required=True,
+    dest="country",
+    help="three letter contry code"
+)
+args = parser.parse_args()
+
+country_data = countries[countries.ISO3==args.country]
+if len(country_data) == 0:
+    print(f"Failed to lookup county code {args.country}", file=sys.stderr)
+    sys.exit(1)
+elif len(country_data) > 1:
+    print(f"Got multiple results for {args.country_code}", file=sys.stderr)
+    sys.exit(1)
+
+scenPath = os.path.join("/maps/mwd24/food_v0/all_results/", args.country.lower())
+os.makedirs(scenPath, exist_ok=True)
+
+datPath = "/maps/mwd24/food_v0/model/"
+coi = country_data['LIST NAME'].iloc[0]
 
 years = [2017,2018,2019,2020,2021]
 

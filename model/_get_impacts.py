@@ -74,7 +74,11 @@ def get_impacts(prov, year, coi, scenPath, datPath):
         provenance_err = row.provenance_err
         # provenance_err = 0
         is_animal = (row.Animal_Product == "Primary")
-        wwf_name = get_wwf_name(item_code)
+        try:
+            wwf_name = get_wwf_name(item_code)
+        except IndexError:
+            print(f"Failed to look up product code {item_code}")
+            continue
         impacts = wwf[(wwf.Country_ISO==producer_iso)
                       &(wwf.Product==wwf_name)]
         # do seperate yield and LU calc

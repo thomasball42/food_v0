@@ -14,7 +14,8 @@ import pickle
 
 # import global_commodity_impacts
 
-datPath = "..\\dat\\model\\dat"
+# datPath = "..\\dat\\model\\dat"
+datPath = "model/dat"
 oPath = "global_commodity_impacts"
 
 db = pd.read_csv(os.path.join(datPath, "..", "crop_db.csv"))
