@@ -15,24 +15,11 @@ import os
 
 #%%
 def get_impacts(prov, year, coi, scenPath, datPath):
-    """
-    Parameters
-    ----------
-    prov : provenance values (tonnes / country)
-    
-    Returns
-    -------
-    wdf : same dataframe but with specific and calculated impacts concat. 
-    
-    """
-    
     rums = {"Meat; cattle" : "bvmeat",
             'Meat; sheep' : "sgmeat",
             'Meat; goat' : "sgmeat",
             'Milk; whole fresh cow' : "bvmilk",
             }   
-    
-
     tb_pasture_vals = pd.read_csv(os.path.join(datPath,"dat",
                                                "tb_pasture_factors_2.csv"),
                                   index_col = 0)        
@@ -60,15 +47,11 @@ def get_impacts(prov, year, coi, scenPath, datPath):
     
     crop_db = pd.read_csv(os.path.join(datPath, "crop_db.csv"),
                                            index_col = 0)
-    global wdf
     wdf = prov.copy()
-
     for i, row in enumerate(wdf.iterrows()):
-        # print(round(i / len(wdf), 4))
+
         idx = row[0]
-        
         row = row[1]
-        global producer_iso
         producer_iso = row.Country_ISO
         producer_code = row.Producer_Country_Code
         item_name = row.Item
@@ -90,13 +73,10 @@ def get_impacts(prov, year, coi, scenPath, datPath):
             country_yield = item_yields[item_yields["Area Code"] == producer_code]
             if len(country_yield) == 0:
                 wdf.loc[idx, "FAO_yield_kgm2"] = item_yields[
-                    item_yields["Area Code"] == 5000].Value.values[0]*0.1/10000 # world UNIT???
-                ### YIELD ERR?
-                
+                    item_yields["Area Code"] == 5000].Value.values[0]*0.1/10000 
             else:
                 wdf.loc[idx, "FAO_yield_kgm2"] = country_yield.Value.values[0]\
                     *0.1/10000
-                ### YIELD ERR?
             yield_val = wdf.loc[idx, "FAO_yield_kgm2"]
             yield_err_perc = 0.0
             land_val = provenance_val * 1000 * (1/yield_val) # tonnes -> kg per m2
@@ -104,8 +84,7 @@ def get_impacts(prov, year, coi, scenPath, datPath):
             # land_val_err = 0
             wdf.loc[idx, "FAO_land_calc_m2"] = land_val
             wdf.loc[idx, "FAO_land_calc_m2_err"] = land_val_err
-            
-            
+
         # if there is no impact data, use the world value instead
         if impacts.size == 0:
             impacts = wwf[(wwf.Country_ISO=="all-r")
@@ -124,12 +103,7 @@ def get_impacts(prov, year, coi, scenPath, datPath):
                         if impact == "Arable_avg" \
                             or impact == "BD_arable_avg_m2":
                             impact_val == 0
-                        # if impact == "Pasture_avg" and item_name in rums.keys():
-                        #     impact_val = impact_val * (rums[item_name][1]\
-                        #                                /rums[item_name][0])
-                        
-                        # change pasture vals to my own calculations:
-                            
+                        # change pasture vals to my own calculations:        
                         if impact == "Pasture_avg" and item_name in rums.keys():
                             producer_past_val = tb_pasture_vals[(tb_pasture_vals.Country_ISO==producer_iso)\
                                                                 &(tb_pasture_vals.livestock==rums[item_name])]
@@ -148,7 +122,6 @@ def get_impacts(prov, year, coi, scenPath, datPath):
                         * (provenance_val * 1000) # impact per kg
                     wdf.loc[idx, impact+"_calc_err"] = wdf.loc[idx, impact+ "_calc"]\
                         * np.sqrt(impact_val_percerr**2+((provenance_err/provenance_val)**2))
-                    # wdf.loc[idx, impact+"_calc_err"] = 0
                 except TypeError:
                     pass
         if wdf.loc[idx, "FAO_yield_kgm2"] == 0:
@@ -227,35 +200,16 @@ def get_impacts(prov, year, coi, scenPath, datPath):
                 print(f"oc {opp_cost_err/opp_cost_val}")
                 print(f"fao {fao_land_calc_err/fao_land_calc}")
             wdf.loc[idx,"bd_opp_cost_calc_err"] = err
-    # keep_cols = ['Producer_Country_Code', 'Item_Code', 'Value', 
-    #             'Animal_Product_Code', 'Country_ISO', 'Item', 
-    #             'Animal_Product', 'provenance', 'Arable_avg', 
-    #             'Arable_avg_calc', 'Pasture_avg', 'Pasture_avg_calc', 
-    #             'GHG_avg', 'GHG_avg_calc', 'Eutr_avg', 
-    #             'Eutr_avg_calc', 'WU_avg', 'WU_avg_calc', 
-    #             'BD_arable_avg_m2', 'BD_arable_avg_m2_calc', 
-    #             'BD_pasture_avg_m2', 'BD_pasture_avg_m2_calc', 
-    #             'SWWU_avg', 'SWWU_avg_calc', "FAO_yield_kgm2", 
-    #             "FAO_land_calc_m2", "bd_opp_cost_m2", 
-    #             "bd_opp_cost_calc"]
-    
-    # wdf = wdf.drop(columns = [x for x in wdf.columns \
-    #                           if x not in keep_cols])
     return wdf
 
-if __name__ == "__main__":
-    coi = "United Kingdom of Great Britain and Northern Ireland"
-    year = 2019
-
-    # scenPath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
-    # scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
-    scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\mod_ls"
-    prov = pd.read_csv(os.path.join(scenPath, "feed.csv"), index_col = 0)
-    datPath = "."
-    
-    feedimp = get_impacts(prov, year, coi, scenPath, datPath)
-    feedimp.to_csv(os.path.join(scenPath, "feed_impacts_wErr.csv"))
-    
-    prov2 = pd.read_csv(os.path.join(scenPath, "human_consumed.csv"), index_col = 0)
-    foodimp = get_impacts(prov2, year, coi, scenPath, datPath)
-    foodimp.to_csv(os.path.join(scenPath, "human_consumed_impacts_wErr.csv"))
+# if __name__ == "__main__":
+#     coi = "United Kingdom of Great Britain and Northern Ireland"
+#     year = 2019
+#     scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\mod_ls"
+#     prov = pd.read_csv(os.path.join(scenPath, "feed.csv"), index_col = 0)
+#     datPath = "."
+#     feedimp = get_impacts(prov, year, coi, scenPath, datPath)
+#     feedimp.to_csv(os.path.join(scenPath, "feed_impacts_wErr.csv"))
+#     prov2 = pd.read_csv(os.path.join(scenPath, "human_consumed.csv"), index_col = 0)
+#     foodimp = get_impacts(prov2, year, coi, scenPath, datPath)
+#     foodimp.to_csv(os.path.join(scenPath, "human_consumed_impacts_wErr.csv"))

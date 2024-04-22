@@ -186,8 +186,6 @@ def main(fs, country_of_interest, scenPath, datPath, prov_err_guesstimate):
         # following items have -ive values ['Linseed', 'Oilseeds nes', 
         # 'Castor oil seed', 'Poppy seed', 'Artichokes', 'Fruit; fresh nes', 
         # 'Chestnut', 'Rapeseed']
-        # They are excluded from analyses in the paper, will exclude them by 
-        # default for now.
         imports_feed_crops = imports_feed_crops[imports_feed_crops.Value >= 0]
         imports_feed_crops_ratio = get_value_ratios_01(imports_feed_crops,
                                                        "Item_Code", True)
@@ -198,14 +196,8 @@ def main(fs, country_of_interest, scenPath, datPath, prov_err_guesstimate):
         imports_no_feed_anim_ratio = get_value_ratios_01(imports_no_feed_anim,
                                                           "Item_Code",True)
         imports_no_feed_anim_ratio.loc[:,"Animal_Product"] = "Primary"
-        # animal products converted into feed to get indirect AP impacts
-        # imports_feed_feed = imports_feed[np.logical_not(
-        #     imports_feed.Animal_Product.isna())]
-        # imports_feed_feed_ratio = get_value_ratios_01(
-        #     imports_feed_feed,"Animal_Product_Code",False)
         human_consumed_imports = pd.concat([imports_feed_crops_ratio,
                                             imports_no_feed_anim_ratio])
-        # feed_consumed_imports = imports_feed_feed_ratio
         return human_consumed_imports
     global human_consumed_imports
     human_consumed_imports = \
@@ -248,9 +240,6 @@ def main(fs, country_of_interest, scenPath, datPath, prov_err_guesstimate):
         global df_hc_err
         df_hc = fs.copy()
         df_hc_err = fserr.copy()
-        # global reject_df
-        # reject_df = pd.DataFrame()
-        # reject = []
         for row in df_hc.iterrows():
             CPC_item_code = row[1]["Item Code"]
             item_name = row[1].item_name
@@ -280,20 +269,14 @@ def main(fs, country_of_interest, scenPath, datPath, prov_err_guesstimate):
                             "Item Code"]==CPC_item_code)]
                         df_hc_err = df_hc_err[np.logical_not(df_hc_err[
                             "Item Code"]==CPC_item_code)]
-                        # reject.append([item_name, "no_primary"])
                     else: 
                         df_hc.loc[row[0], "ratio"] = ratio
                         df_hc_err.loc[row[0], "ratio"] = ratio
                 except IndexError:
-                    # reject.append([item_name, "no_dm"])
                     df_hc = df_hc[np.logical_not(df_hc["Item Code"]==
                                                  CPC_item_code)]
                     df_hc_err = df_hc_err[np.logical_not(df_hc_err["Item Code"]==
                                                  CPC_item_code)]
-        #     else: reject.append([item_name, "aggregate_or_notindf"])
-        # reject_df = pd.concat([reject_df, 
-        #                        pd.DataFrame(reject, columns=["item_name",
-        #                                                      "cause"])])
         df_hc = df_hc[np.logical_not(df_hc.ratio.isna())]
         df_hc_err = df_hc_err[np.logical_not(df_hc_err.ratio.isna())]
         df_hc["value_primary"] = df_hc.Value / df_hc.ratio
@@ -383,21 +366,14 @@ def main(fs, country_of_interest, scenPath, datPath, prov_err_guesstimate):
     feed_prov.to_csv(os.path.join(scenPath, "feed.csv"))
     return cons_prov, feed_prov
 
-if __name__ == "__main__":
-    
-    prov_err_guesstimate = 0.0
-    coi = "United Kingdom of Great Britain and Northern Ireland"
-    years = [2017,2018,2019,2020,2021]
-    
-    # datPath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\stack_paper\\dat\\model"
-    datPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\dat\\model"
-    # scenPath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
-    # scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
-    scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\mod_ls"
-    
-    sua = pd.read_csv(os.path.join(datPath, "dat",
-                        "SUA_Crops_Livestock_E_All_Data_(Normalized).csv"),
-                        encoding = "latin-1")
-    fs = sua[(sua.Area==coi)&(sua["Element Code"]==5141)&(sua.Year.isin(years))]
-    
-    main(fs, coi, scenPath, datPath, prov_err_guesstimate)
+# if __name__ == "__main__":
+#     prov_err_guesstimate = 0.1
+#     coi = "United Kingdom of Great Britain and Northern Ireland"
+#     years = [2017,2018,2019,2020,2021]
+#     datPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\dat\\model"
+#     scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\mod_ls"
+#     sua = pd.read_csv(os.path.join(datPath, "dat",
+#                         "SUA_Crops_Livestock_E_All_Data_(Normalized).csv"),
+#                         encoding = "latin-1")
+#     fs = sua[(sua.Area==coi)&(sua["Element Code"]==5141)&(sua.Year.isin(years))]
+#     main(fs, coi, scenPath, datPath, prov_err_guesstimate)
