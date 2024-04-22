@@ -14,42 +14,81 @@ import pickle
 
 # import global_commodity_impacts
 
-datPath = "..\\dat\\model\\dat"
-oPath = "global_commodity_impacts"
+datPath = "food_v0"
 
-db = pd.read_csv(os.path.join(datPath, "..", "crop_db.csv"))
+# OneDrivePath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge"
+OneDrivePath = "E:\\OneDrive\\OneDrive - University of Cambridge"
+oPath = os.path.join(OneDrivePath, "Work\\FOODv0\\results\\global_results")
 
+db = pd.read_csv(os.path.join(datPath, "crop_db.csv"))
+
+grouping = "group_name_v6"
 quants = [0.10, 0.5, 0.90]
 # =============================================================================
-figsize = (8,6)
-ylabel = "log10 LIFE restore per kg"
+figsize = (8,7)
+alpha = 0.8
+ylabel = u"Specific extinction impact distribution (log10 $\Delta$E per-kilogram)"
 # =============================================================================
 
-colours_stim = { 'Ruminant meat'             : "#40004b",
-                'Pig meat'                  : "#762a83",
-                'Poultry meat'              : "#9970ab",
-                'Dairy'                     : "#c2a5cf",
-                'Eggs'                      : "#e7d4e8",
+colours_stim = { 
+                'Ruminant meat' : "#C90D75",
+                'Pig meat'       : "#D64A98",
+                'Poultry meat'   : "#D880B1",
+                'Dairy'          : "#F7BDDD",
+                'Eggs'           : "#FFEDF7",
                 
-                'Grains'                    : "#00441b",
-                'Roots and tubers'          : "#1b7837",
-                'Vegetables'                : "#5aae61",
-                'Fruit'                     : "#a6dba0",
-                'Legumes, nuts, and seeds'  : "#d9f0d3",
+                'Grains'             : "#D55E00",
+                "Rice"               : "#D88E53",
+                "Soybeans"           : "#DCBA9E",
+                
+                'Roots and tubers'   : "#0072B2",
+                'Vegetables'         : "#4F98C1",
+                'Legumes and pulses' : "#9EBFD2",
+                
+                'Bananas'           : "#FFED00",
+                'Tropical fruit'    : "#FFF357",
+                'Temperate fruit'   : "#FDF8B9",
+                'Tropical nuts'     : "#27E2FF",
+                'Temperate nuts'    : "#7DEEFF",
+                
+                
+                
                     
-                'Sugar crops'               : "#68EFF8",
-                'Spices'                    : "#00C8D5",
-                'Coffee'                : "#2b00d5",
-                'Cocoa'                 : "#003cd5",
-                "Tea and maté"          : "#0072d5",
+                'Sugar beet'    : "#FFC000",
+                'Sugar cane'    : "#F7C93B",
+                'Spices'        : "#009E73",
+                'Coffee'        : "#33CCA2",
+                'Cocoa'         : "#62DEBC",
+                "Tea and maté"  : "#A2F5DE",
                 
-                "Other" : "k"
+                "Oilcrops" : "#000000",
+                "Other" : "#A2A2A2"
                 }
+
 
 with open(os.path.join(oPath,"datalist.pkl"), 'rb') as file:
     datalist = pickle.load(file)
 with open(os.path.join(oPath,"itemlist.pkl"), 'rb') as file:
     itemlist = pickle.load(file)
+
+def invert_color(hex_color):
+    # Remove '#' if present
+    hex_color = hex_color.lstrip('#')
+    
+    # Convert hex to RGB
+    red = int(hex_color[0:2], 16)
+    green = int(hex_color[2:4], 16)
+    blue = int(hex_color[4:6], 16)
+    
+    # Invert RGB
+    inverted_red = 255 - red
+    inverted_green = 255 - green
+    inverted_blue = 255 - blue
+    
+    # Convert back to hex
+    inverted_hex = '#{0:02x}{1:02x}{2:02x}'.format(inverted_red, inverted_green, inverted_blue)
+    
+    return inverted_hex
 
 def weighted_quantile(values, quantiles, sample_weight=None, 
                       values_sorted=False, old_style=False):
@@ -89,10 +128,11 @@ def weighted_quantile(values, quantiles, sample_weight=None,
 
 
 def get_group(item, tgroup, isanim):
-    
     group = db[db.Item == item][tgroup].squeeze()
     if isanim:
-        group = item
+        group = db[db.group_name_v2 == item][tgroup].squeeze()
+        if not type(group) == str and len(group) > 1:
+            group = group.iloc[0]
     return group
         
 df = pd.DataFrame()
@@ -100,12 +140,9 @@ for i, item in enumerate(itemlist):
     dat = datalist[i]
     if len(dat)>0:
         dat["Item"] = item
-        
         isanim = dat.isanim.any()
-        dat["Group"] = [get_group(item,"group_name_v5",isanim) for k in range(len(dat))]
+        dat["Group"] = [get_group(item,grouping,isanim) for k in range(len(dat))]
         df = pd.concat([df,dat])
-
-
 
 df["t_est"] = df.bd * df.w
 #%%
@@ -117,8 +154,13 @@ for i, item in enumerate(df[AGGREGATE].unique()):
     dat["wn"] = dat.w / dat.w.sum()
     df.loc[df[AGGREGATE] == item, ["LQ","MQ","HQ"]] = weighted_quantile(dat.bd, quants, 
                                 sample_weight=dat.wn,values_sorted=False)
+    
 #%%
 df = df.sort_values("MQ")
+odf =pd.DataFrame()
+
+df = df[df.Group != "Other"]
+
 tick_labels = []
 fig, ax = plt.subplots()
 for i, item in enumerate(df[AGGREGATE].unique()):       
@@ -130,28 +172,30 @@ for i, item in enumerate(df[AGGREGATE].unique()):
     LQ = dat.LQ.unique().squeeze()
     MQ = dat.MQ.unique().squeeze()
     HQ = dat.HQ.unique().squeeze()
+    
+    odf = pd.concat([odf, pd.DataFrame([item, LQ,MQ,HQ],index= ["g", "LQ", "MQ", "HQ"]).T])
     LQ = np.log10(LQ)
     MQ = np.log10(MQ)
     HQ = np.log10(HQ)
     pr = HQ-LQ
     
-    # GET COLOURS
+    try:
+        color = colours_stim[item]
+    except KeyError:
+        color = "r"
+        
     # if dat.isanim.any():
-    #     group = db[db.group_name_v2 == item].group_name_v3.squeeze()
-    #     if not isinstance(group, str):
-    #         group = group.iloc[0]
-    # else:
-    #     group = db[db.Item == item].group_name_v3.squeeze()
-    # color = colours_stim[group]
-    color = "r"
-    if dat.isanim.any():
-        xcolor = "r"
-    else: xcolor = "g"   
+    #     xcolor = "b"
+    # else: xcolor = "g"  
+    
     # PLOT
-    ax.bar(i, pr, bottom = LQ, fill=True, color = color, edgecolor = color, alpha = 1)
+    ax.bar(i, pr, bottom = LQ, fill=True, color = color, 
+           edgecolor = color, alpha = alpha)
     # ax.scatter(i, p50, marker = "x", color = xcolor)
-    ax.bar(i, 0, bottom = MQ, fill=False, edgecolor = xcolor, alpha = 1)
+    ax.bar(i, 0, bottom = MQ, fill=False, edgecolor = invert_color(color), alpha = 1)
+    
     tick_labels.append(item) 
+
 # EXTRAS
 ax.set_xticks(np.arange(0,len(tick_labels),1), 
               labels = tick_labels, 
@@ -159,3 +203,5 @@ ax.set_xticks(np.arange(0,len(tick_labels),1),
 ax.set_ylabel(ylabel)
 fig.set_size_inches(figsize)
 fig.tight_layout()
+
+odf.to_csv(os.path.join("results", "odf_commodities.csv"))
