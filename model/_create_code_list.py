@@ -7,7 +7,7 @@ Created on Mon Jul 25 16:03:16 2022
 
 import os
 try:
-    import model.data_utils
+    import offshoring.data_utils
 except ModuleNotFoundError:
     import data_utils
 import pandas as pd

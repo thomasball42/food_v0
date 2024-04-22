@@ -12,11 +12,12 @@ import sys
 try:
     import data_utils
 except ModuleNotFoundError:
-    import model.data_utils as data_utils
+    import offshoring.data_utils as data_utils
     
 def add_item_cols(indf, datPath):
     item_codes = data_utils.get_item_codes(datPath)
     for i, idx in enumerate(indf.index):
+        global CPC_item_code
         CPC_item_code = indf.loc[idx]["Item Code (CPC)"]
         try:
             item_info = item_codes[item_codes["CPC Code"] == CPC_item_code]
@@ -28,7 +29,11 @@ def add_item_cols(indf, datPath):
             pass
     return indf
 
-def main(fs, country_of_interest, scenPath, datPath):
+def main(fs, country_of_interest, scenPath, datPath, prov_err_guesstimate):
+    
+    global fserr
+    global means
+    global errs
     
     fserr = fs.copy()
     means = fs.groupby(["Item", "Item Code"]).Value.mean().reset_index()
@@ -202,6 +207,7 @@ def main(fs, country_of_interest, scenPath, datPath):
                                             imports_no_feed_anim_ratio])
         # feed_consumed_imports = imports_feed_feed_ratio
         return human_consumed_imports
+    global human_consumed_imports
     human_consumed_imports = \
         import_ratios(  prov_mat_feed,
                         prov_mat_no_feed, 
@@ -212,10 +218,13 @@ def main(fs, country_of_interest, scenPath, datPath):
     file_reqs = ["content_factors_per_100g.xlsx", "primary_item_map_feed.csv", 
                  "weighing_factors.csv"]
     try:
+        global factors
         factors = pd.read_excel(data_utils.file_list(
             search=[datPath, file_reqs[0]])[0], skiprows=1)
+        global item_map
         item_map = pd.read_csv(data_utils.file_list(
             search=[datPath, file_reqs[1]])[0], encoding = "latin-1")
+        global weighing_factors
         weighing_factors = pd.read_csv(data_utils.file_list(search=[
             datPath, file_reqs[2]])[0], encoding = "latin-1")
     except IndexError:
@@ -235,8 +244,13 @@ def main(fs, country_of_interest, scenPath, datPath):
         feed_prov : animal products converted to feed requirement and respective
                     crop provenance (countries * feed products)
         """
+        global df_hc
+        global df_hc_err
         df_hc = fs.copy()
         df_hc_err = fserr.copy()
+        # global reject_df
+        # reject_df = pd.DataFrame()
+        # reject = []
         for row in df_hc.iterrows():
             CPC_item_code = row[1]["Item Code"]
             item_name = row[1].item_name
@@ -308,7 +322,6 @@ def main(fs, country_of_interest, scenPath, datPath):
                 pass
             else:
                 prov = import_ratios.Value * value_primary
-                prov_err_guesstimate = 0.0
                 prov_err = prov * prov_err_guesstimate
                 imports["provenance"] = prov
                 if prov.sum() > 0 and value_primary > 0:
@@ -317,9 +330,11 @@ def main(fs, country_of_interest, scenPath, datPath):
                 cons_prov = pd.concat([cons_prov, imports])
         
         # provenance of feed
+        global primary_consumption_anim
         primary_consumption_anim = primary_consumption[
             primary_consumption.primary_item_code.isin(
                 weighing_factors.Item_Code)]
+        global feed_prov
         feed_prov = pd.DataFrame()
         # get animal product
         print("Calculating feed provenance")
@@ -367,3 +382,22 @@ def main(fs, country_of_interest, scenPath, datPath):
     feed_prov = feed_prov[(feed_prov.Value > 1E-8)&(feed_prov.provenance > 0)]
     feed_prov.to_csv(os.path.join(scenPath, "feed.csv"))
     return cons_prov, feed_prov
+
+if __name__ == "__main__":
+    
+    prov_err_guesstimate = 0.0
+    coi = "United Kingdom of Great Britain and Northern Ireland"
+    years = [2017,2018,2019,2020,2021]
+    
+    # datPath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\stack_paper\\dat\\model"
+    datPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\dat\\model"
+    # scenPath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
+    # scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
+    scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\mod_ls"
+    
+    sua = pd.read_csv(os.path.join(datPath, "dat",
+                        "SUA_Crops_Livestock_E_All_Data_(Normalized).csv"),
+                        encoding = "latin-1")
+    fs = sua[(sua.Area==coi)&(sua["Element Code"]==5141)&(sua.Year.isin(years))]
+    
+    main(fs, coi, scenPath, datPath, prov_err_guesstimate)

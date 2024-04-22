@@ -96,7 +96,7 @@ def get_wwf_pbd(datPath):
 
 def fbs_sua_item_codes(datPath):
     try:
-        import model._create_code_list as _create_code_list
+        import offshoring._create_code_list as _create_code_list
     except ModuleNotFoundError:
         import _create_code_list
     code_list = _create_code_list.return_list(datPath)

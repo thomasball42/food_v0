@@ -6,8 +6,9 @@ Created on Wed Mar 15 16:41:04 2023
 """
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 try:
-    import model.data_utils as data_utils
+    import offshoring.data_utils as data_utils
 except ModuleNotFoundError:
     import data_utils
 import os
@@ -25,13 +26,18 @@ def get_impacts(prov, year, coi, scenPath, datPath):
     
     """
     
+    rums = {"Meat; cattle" : "bvmeat",
+            'Meat; sheep' : "sgmeat",
+            'Meat; goat' : "sgmeat",
+            'Milk; whole fresh cow' : "bvmilk",
+            }   
     
-    
+
     tb_pasture_vals = pd.read_csv(os.path.join(datPath,"dat",
                                                "tb_pasture_factors_2.csv"),
                                   index_col = 0)        
     bd_opp_cost = pd.read_csv(os.path.join(datPath, "dat", 
-                                           "country_opp_cost_v4.csv"),
+                                           "country_opp_cost_v2.csv"),
                                            index_col = 0)
     
     prov = prov[np.logical_not(prov.Item.isna())]
@@ -54,18 +60,15 @@ def get_impacts(prov, year, coi, scenPath, datPath):
     
     crop_db = pd.read_csv(os.path.join(datPath, "crop_db.csv"),
                                            index_col = 0)
-    
-    rums = {"Meat; cattle" : "bvmeat",
-            'Meat; sheep' : "sgmeat",
-            'Meat; goat' : "sgmeat",
-            'Milk; whole fresh cow' : "bvmilk",
-            }   
+    global wdf
     wdf = prov.copy()
 
     for i, row in enumerate(wdf.iterrows()):
         # print(round(i / len(wdf), 4))
         idx = row[0]
+        
         row = row[1]
+        global producer_iso
         producer_iso = row.Country_ISO
         producer_code = row.Producer_Country_Code
         item_name = row.Item
@@ -164,7 +167,8 @@ def get_impacts(prov, year, coi, scenPath, datPath):
         oc_crop_err = bd_opp_cost.crop_err
         oc_crop_err = oc_crop_err[oc_crop_err >0]
         oc_crop_err = np.exp(np.log(oc_crop_err).mean())
-        if is_animal:
+        global gz_name
+        if is_animal == True:
             gz_name = crop_db[crop_db.Item_Code == item_code].animal_bd_name.squeeze()
         else: 
             gz_name = crop_db[crop_db.Item_Code == item_code].GAEZres06.squeeze()
@@ -218,10 +222,10 @@ def get_impacts(prov, year, coi, scenPath, datPath):
                 opp_cost_err/opp_cost_val)**2+(
                     fao_land_calc_err/fao_land_calc)**2)
             
-            # if err == 0:
-            #     print(f"val {wdf.loc[idx,'bd_opp_cost_calc']}")
-            #     print(f"oc {opp_cost_err/opp_cost_val}")
-            #     print(f"fao {fao_land_calc_err/fao_land_calc}")
+            if err == 0:
+                print(f"val {wdf.loc[idx,'bd_opp_cost_calc']}")
+                print(f"oc {opp_cost_err/opp_cost_val}")
+                print(f"fao {fao_land_calc_err/fao_land_calc}")
             wdf.loc[idx,"bd_opp_cost_calc_err"] = err
     # keep_cols = ['Producer_Country_Code', 'Item_Code', 'Value', 
     #             'Animal_Product_Code', 'Country_ISO', 'Item', 
@@ -238,3 +242,20 @@ def get_impacts(prov, year, coi, scenPath, datPath):
     # wdf = wdf.drop(columns = [x for x in wdf.columns \
     #                           if x not in keep_cols])
     return wdf
+
+if __name__ == "__main__":
+    coi = "United Kingdom of Great Britain and Northern Ireland"
+    year = 2019
+
+    # scenPath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
+    # scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\baseline"
+    scenPath = "E:\\OneDrive\\OneDrive - University of Cambridge\\Work\\stack_paper\\results\\mod_ls"
+    prov = pd.read_csv(os.path.join(scenPath, "feed.csv"), index_col = 0)
+    datPath = "."
+    
+    feedimp = get_impacts(prov, year, coi, scenPath, datPath)
+    feedimp.to_csv(os.path.join(scenPath, "feed_impacts_wErr.csv"))
+    
+    prov2 = pd.read_csv(os.path.join(scenPath, "human_consumed.csv"), index_col = 0)
+    foodimp = get_impacts(prov2, year, coi, scenPath, datPath)
+    foodimp.to_csv(os.path.join(scenPath, "human_consumed_impacts_wErr.csv"))

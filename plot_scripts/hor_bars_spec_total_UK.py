@@ -375,7 +375,6 @@ fig.set_size_inches(figsize)
 fig.tight_layout()
 # fig.savefig(os.path.join(savepath, "specific_total_hbar_extinctions.png"),
 #             dpi = 500)
-
 # df= pd.DataFrame({"Group":ogroup,"bd_value":oval, "bd_err":ovalerr,"dratio":drat})
 # df_uk.to_csv(os.path.join(bpath, "df_uk.csv"))
 # df_os.to_csv(os.path.join(bpath, "df_os.csv"))
