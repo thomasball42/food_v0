@@ -6,28 +6,22 @@ Created on Tue Jan  9 11:21:46 2024
 """
 
 import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import pickle
 
-# import global_commodity_impacts
+datPath = os.path.join("..", "model", "dat")
+oPath = os.path.join("..", "model", "global_commodity_impacts")
 
-datPath = "food_v0"
-
-# OneDrivePath = "C:\\Users\\Thomas Ball\\OneDrive - University of Cambridge"
-OneDrivePath = "E:\\OneDrive\\OneDrive - University of Cambridge"
-oPath = os.path.join(OneDrivePath, "Work\\FOODv0\\results\\global_results")
-
-db = pd.read_csv(os.path.join(datPath, "crop_db.csv"))
+db = pd.read_csv(os.path.join("..", "model", "crop_db.csv"))
 
 grouping = "group_name_v6"
 quants = [0.10, 0.5, 0.90]
 # =============================================================================
 figsize = (8,7)
 alpha = 0.8
-ylabel = u"Specific extinction impact distribution (log10 $\Delta$E per-kilogram)"
+ylabel = u"Specific extinction impact distribution (log10 $\Delta$E per-kilogram-year)"
 # =============================================================================
 
 colours_stim = { 
@@ -50,9 +44,6 @@ colours_stim = {
                 'Temperate fruit'   : "#FDF8B9",
                 'Tropical nuts'     : "#27E2FF",
                 'Temperate nuts'    : "#7DEEFF",
-                
-                
-                
                     
                 'Sugar beet'    : "#FFC000",
                 'Sugar cane'    : "#F7C93B",
@@ -67,9 +58,11 @@ colours_stim = {
 
 
 with open(os.path.join(oPath,"datalist.pkl"), 'rb') as file:
-    datalist = pickle.load(file)
+    # datalist = pickle.load(file)
+    datalist = pd.read_pickle(file)
 with open(os.path.join(oPath,"itemlist.pkl"), 'rb') as file:
-    itemlist = pickle.load(file)
+    # itemlist = pickle.load(file)
+    itemlist = pd.read_pickle(file)
 
 def invert_color(hex_color):
     # Remove '#' if present
@@ -147,6 +140,7 @@ for i, item in enumerate(itemlist):
 df["t_est"] = df.bd * df.w
 #%%
 AGGREGATE = "Group"
+# AGGREGATE = "Item"
 
 for i, item in enumerate(df[AGGREGATE].unique()):
     dat = df[(df[AGGREGATE] == item)&(np.isfinite(df.w))]
@@ -160,7 +154,6 @@ df = df.sort_values("MQ")
 odf =pd.DataFrame()
 
 df = df[df.Group != "Other"]
-
 tick_labels = []
 fig, ax = plt.subplots()
 for i, item in enumerate(df[AGGREGATE].unique()):       
@@ -186,8 +179,10 @@ for i, item in enumerate(df[AGGREGATE].unique()):
         
     # if dat.isanim.any():
     #     xcolor = "b"
-    # else: xcolor = "g"  
+    # else: xcolor = "g" 
     
+    color = "#D55E00"
+
     # PLOT
     ax.bar(i, pr, bottom = LQ, fill=True, color = color, 
            edgecolor = color, alpha = alpha)
@@ -203,5 +198,3 @@ ax.set_xticks(np.arange(0,len(tick_labels),1),
 ax.set_ylabel(ylabel)
 fig.set_size_inches(figsize)
 fig.tight_layout()
-
-odf.to_csv(os.path.join("results", "odf_commodities.csv"))
